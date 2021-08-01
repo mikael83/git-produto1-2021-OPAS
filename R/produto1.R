@@ -1,13 +1,10 @@
+######################################################################
+############ Script de produto I do contrato 2021 ####################
+####### Medicamentos e tratamentos  2007 - 2018 - hepatite C #########
+########### V.1.0 - Desenvolvido por Mikael Lemos ####################
+######################################################################
 
-############ Produto 1 ###########################
-##################################################
-###### script desenvolvido por Mikael Lemos ######
-###### versão 1.0 - 21.06.2019 ##################
-##################################################
-
-######
-### Loading / installing packages
-######
+#### Carregando bibliotecas ####
 
 #install.packages('dplyr')
 library('dplyr')
@@ -21,539 +18,639 @@ library('data.table')
 #install.packages('stringr')
 library('stringr')
 
+#install.packages('Amelia')
+library('Amelia')
+
 # install.packages("tidyverse")
-library("tidyverse")
+library(tidyverse)
 
 # install.packages("lubridate")
-library("lubridate")
+library(lubridate)
 
-#install.packages("Amelia")
-library("Amelia")
+# install.packages("ggplot2")
+library(ggplot2)
 
-#install.packages('Rtools')
-#library('Rtools')
+#library(xlsx)
 
-#install.packages('microbenchmark')
-library("microbenchmark")
+library(rJava)
 
-#install.packages('ggplot2movies')
-library("ggplot2movies")
+#install.packages("read.dbc")
 
-#install.packages('profvis')
-library("profvis")
+library(read.dbc)
 
-#install.packages('Rcpp')
-library("Rcpp")
+#install.packages("forcats")
 
-#install.packages('compiler')
-library("compiler")
+#library(forcats)
 
-#install.packages('memoise')
-library("memoise")
+library("foreign")
 
-#install.packages('DiagrammeR')
-library("DiagrammeR")
+#install.packages("foreign")
 
-#install.packages('rio')
-library("rio")
+#install.packages("openxlsx")
 
-#install.packages('readr')
-library("readr")
+library("openxlsx")
 
-#install.packages('data.table')
-library("data.table")
+library(RColorBrewer)
 
-#install.packages('feather')
-library("feather")
 
-#install.packages('WDI')
-library("WDI")
+###################
+### Carregando bancos para os cruzamentos
+##################
 
+## SIH/AIH
+
+AIH_SIH <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/AIH_PR_BDcompleto.csv")
+
+AIH_SIH$DT_OCOR <- as.Date(AIH_SIH$DT_OCOR)
+
+AIH_SIH$ano <- ymd(AIH_SIH$DT_OCOR)
+
+AIH_SIH$ano <- year(AIH_SIH$ano)
+
+## SIA
+
+APAC_SIA_trat_hepc <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/TB_ESPELHO_APAC_202107281009.csv")
+
+SIA_APAC <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/APAC_PR_BDcompleto.csv")
+
+SIA_APAC$DT_OCOR <- as.Date(SIA_APAC$DT_OCOR)
+
+SIA_APAC$ano <- ymd(SIA_APAC$DT_OCOR)
+
+SIA_APAC$ano <- year(SIA_APAC$ano)
+
+## BPAI
+
+BPAI <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/BPAI_PR_BDcompleto.csv")
+
+BPAI$DT_OCOR <- as.Date(BPAI$DT_OCOR)
+
+BPAI$ano <- ymd(BPAI$DT_OCOR)
+
+BPAI$ano <- year(BPAI$ano)
+
+## GAL
+
+GAL <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/GAL_hepc.csv")
+
+## SINAN
+
+SINAN <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SINAN.csv")
+
+SINAN$DT_OCOR <- as.Date(SINAN$DT_OCOR)
+
+SINAN$ano <- ymd(SINAN$DT_OCOR)
+
+SINAN$ano <- year(SINAN$ano)
+
+############
+#### Filtro para hepatite C
+###########
+
+
+## AIH - SIH
+
+AIH_SIH_hepc <- AIH_SIH %>% filter(grepl('C', HEPATITE))
+
+## SIA
+
+SIA_APAC_hepc <- SIA_APAC %>% filter(grepl('C', HEPATITE))
+
+## BPAI
+
+BPAI_hepc <- BPAI %>% filter(grepl('C', HEPATITE))
+
+## SINAN
+
+#SINAN_hepc <- SINAN %>% filter(grepl('C', HEPATITE))
+
+## GAL
+
+GAL_agravo <- table(GAL$AGRAVO_REQUISICAO)
+
+GAL_agravo <- as.data.frame(GAL_agravo)
+
+GAL_hepatite <- GAL %>% filter(grepl('HEPATITES VIRAIS', AGRAVO_REQUISICAO))
+
+GAL_hepatite <- GAL %>% filter(grepl('Resultado: Detectavel|Resultado: Reagente|Resultado: Acima do limite de quantificacao', RESULTADO))
+
+GAL_hepatite_c <- GAL_hepatite %>% filter(grepl('Hepatite C', NO_EXAME))
+
+GAL_hepatite_c$CID <- "B182/B171"
+
+GAL_hepatite_c$DB_ORIGEM <- "GAL"
+
+GAL_hepatite_c$HEPATITE <- "c"
+
+GAL_hepatite_c$IDADE <- " "
+
+GAL_hepatite_c$ano <- " "
+
+GAL_hepatite_c_filtro <- select(GAL_hepatite_c, "ID_PACIENTE", "CID", "PROCEDIMENTO" = "NO_EXAME", "SEXO" = "DS_SEXO", "MUN_RES" = "CO_MUNICIPIO_RESIDENCIA", "MUN_OCOR" = "CO_MUNICIPIO_RESIDENCIA", "DT_NASC" = "DT_NASCIMENTO",  "DT_OCOR" = "DT_COLETA", "DB_ORIGEM", "HEPATITE", "IDADE", "UF_RES" = "SG_UF_RESIDENCIA",  "UF_OCOR" = "CO_UF_REQUISICAO", "ano")
+
+GAL_datas <- select(GAL_hepatite_c, "DT_SOLICITACAO", "DT_SINTOMAS", "DT_CADASTRO", "DT_COLETA", "DT_ENCAMINHADO", "DT_RECEBIMENTO", "DT_PROCESSAMENTO" , "DT_LIBERACAO" )
+
+GAL_datas <- as.data.frame(GAL_datas)
+
+GAL_hepatite_c_filtro$DT_NASC <- as.Date(GAL_hepatite_c_filtro$DT_NASC)
+GAL_hepatite_c_filtro$DT_OCOR <- as.Date(GAL_hepatite_c_filtro$DT_OCOR)
+
+##### Column "IDADE"
+YEAR1 <- data_frame(year  = ymd(GAL_hepatite_c_filtro$DT_NASC))
+YEAR2 <- data_frame(year = ymd(GAL_hepatite_c_filtro$DT_OCOR))
+
+GAL_hepatite_c_filtro$IDADE <-  as.period(year(YEAR2$year) - year(YEAR1$year), units = "year")
+
+GAL_hepatite_c_filtro$IDADE <- gsub("[S]", "", GAL_hepatite_c_filtro$IDADE)
+
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "11"] <- "RO"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "12"] <- "AC"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "13"] <- "AM"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "14"] <- "RR"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "15"] <- "PA"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "16"] <- "AP"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "17"] <- "TO"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "21"] <- "MA"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "22"] <- "PI"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "23"] <- "CE"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "24"] <- "RN"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "25"] <- "PB"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "26"] <- "PE"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "27"] <- "AL"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "28"] <- "SE"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "29"] <- "BA"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "31"] <- "MG"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "32"] <- "ES"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "33"] <- "RJ"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "35"] <- "SP"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "41"] <- "PR"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "42"] <- "SC"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "43"] <- "RS"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "50"] <- "MS"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "51"] <- "MT"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "52"] <- "GO"
+GAL_hepatite_c_filtro$UF_OCOR[GAL_hepatite_c_filtro$UF_OCOR == "53"] <- "DF"
+
+#GAL - NAs 
+is.na(GAL_hepatite_c) <- GAL_hepatite_c==''  
+is.na(GAL_hepatite_c) <- GAL_hepatite_c=='*' 
+is.na(GAL_hepatite_c) <- GAL_hepatite_c=='//'
+
+is.na(GAL_datas) <- GAL_datas==''  
+is.na(GAL_datas) <- GAL_datas=='*' 
+is.na(GAL_datas) <- GAL_datas=='//'
+
+
+## Divisão por ano - DT_OCOR  2007 - 2018
+
+GAL_hepatite_c_filtro$DT_OCOR <- as.Date(GAL_hepatite_c_filtro$DT_OCOR)
+
+GAL_hepatite_c_filtro$ano <- ymd(GAL_hepatite_c_filtro$DT_OCOR)
+
+GAL_hepatite_c_filtro$ano <- year(GAL_hepatite_c_filtro$ano)
+
+
+#####
+## Filtro de procedimentos
+####
+
+#######
+### UNIÃO DE BANCOS - Identificação de pacientes com hepatite C
+#######
+
+## AIH - SIH/ SIA - APAC/ BPAI / GAL
+
+SIH_APAC_BPAI_GAL_hepc <- do.call("rbind", list( SIA_APAC_hepc, AIH_SIH_hepc, GAL_hepatite_c_filtro, BPAI_hepc))
+
+SIH_APAC_BPAI_GAL_hepc_un <- distinct(SIH_APAC_BPAI_GAL_hepc, ID_PACIENTE , .keep_all = TRUE)
+
+
+#SIH_APAC_BPAI_GAL_hepc - NAs 
+is.na(SIH_APAC_BPAI_GAL_hepc_un) <- SIH_APAC_BPAI_GAL_hepc_un==''  
 
 ######
-### Loading DATA FRAME
+## Correção de datas - SIH_APAC_BPAI_GAL_hepc_un
 ######
 
-##### APAC ####
-#### MAC mikael
-df.APAC_procedimento <- read.csv("/Users/mikaellemos/Produtos/produto1/produto1_APAC_UF_procedimento.csv")
+SIH_APAC_BPAI_GAL_hepc_un_corre_datas <- filter(SIH_APAC_BPAI_GAL_hepc_un, ano == 1601 | ano == 1940 | ano == 1946 | ano == 1950 | ano == 1954 | ano == 1955 | ano == 1961 | ano == 1964 | ano == 1965 | ano == 1968 | ano == 1971 | ano == 1974 | ano == 1977 | ano == 1983 | ano == 1984 | ano == 1988 | ano == 1990 | ano == 2002 | ano == 2003 | ano == 2004 | ano == 2006 | ano == 2019)
 
-df.APAC_CID <- read.csv("/Users/mikaellemos/Produtos/produto1/produto1_APAC_UF_CID.csv")
+SIH_APAC_BPAI_GAL_hepc_un_corre_datas_ij <- inner_join(SIH_APAC_BPAI_GAL_hepc_un_corre_datas, GAL_hepatite_c, by="ID_PACIENTE")
 
-
-## Datas de procedimentos
-
-df.APAC_procedimento$DATA_INICIO <- as.character(df.APAC_procedimento$DATA_INICIO)
-df.APAC_procedimento$DATA_FIM <- as.character(df.APAC_procedimento$DATA_FIM)
-
-df.APAC_procedimento$DATA_INICIO <- dmy(df.APAC_procedimento$DATA_INICIO)
-df.APAC_procedimento$DATA_FIM <- dmy(df.APAC_procedimento$DATA_FIM)
-
-df.APAC_procedimento$DATA_SOLIC <- as.character(df.APAC_procedimento$DATA_SOLIC)
-df.APAC_procedimento$DATA_GERACAO <- as.character(df.APAC_procedimento$DATA_GERACAO)
-
-df.APAC_procedimento$DATA_SOLIC <- dmy(df.APAC_procedimento$DATA_SOLIC)
-df.APAC_procedimento$DATA_GERACAO <- dmy(df.APAC_procedimento$DATA_GERACAO)
-
-## Separar data - dia, mês, ano
-
-df.APAC_procedimento <- df.APAC_procedimento %>%
-  separate(DATA_INICIO, sep="-", into = c("ano_inicio", "mes_inicio", "dia_inicio"))
-
-df.APAC_procedimento <- df.APAC_procedimento %>%
-  separate(DATA_FIM, sep="-", into = c("ano_fim", "mes_fim", "dia_fim"))
-
-df.APAC_procedimento <- df.APAC_procedimento %>%
-  separate(DATA_SOLIC, sep="-", into = c("ano_solic", "mes_solic", "dia_solic"))
-
-df.APAC_procedimento <- df.APAC_procedimento %>%
-  separate(DATA_GERACAO, sep="-", into = c("ano_gera", "mes_gera", "dia_gera")) 
+SIH_APAC_BPAI_GAL_hepc_un_corre_datas_ij_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_corre_datas_ij, ID_PACIENTE , .keep_all = TRUE)
 
 
-table(df.APAC_procedimento$ano_solic, useNA="always")
+SIH_APAC_BPAI_GAL_hepc_un$ano[is.na(SIH_APAC_BPAI_GAL_hepc_un$ano)] <- 2018
 
-table(df.APAC_procedimento$ano_gera, useNA="always")
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1968 ] <- 2014
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 2019 ] <- 2018
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1601 ] <- 2010
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1940 ] <- 2015
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1946 ] <- 2012
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1950 ] <- 2012
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1954 ] <- 2017
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1955 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1961 ] <- 2018
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1964 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1965 ] <- 2014
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1971 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1974 ] <- 2014
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1977 ] <- 2018
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1983 ] <- 2014
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1984 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1988 ] <- 2012
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 1990 ] <- 2016
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 2002 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 2003 ] <- 2013
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 2004 ] <- 2015
+SIH_APAC_BPAI_GAL_hepc_un$ano[SIH_APAC_BPAI_GAL_hepc_un$ano == 2006 ] <- 2016
 
-table(df.APAC_procedimento$ano_inicio, useNA="always")
 
 
-df.APAC_procedimento_2015 <- filter(df.APAC_procedimento, df.APAC_procedimento$ano_inicio == 2015)
+#####
+##  Pacientes notificados no SINAN ou Não
+#####
 
-df.APAC_procedimento_2016 <- filter(df.APAC_procedimento, df.APAC_procedimento$ano_inicio == 2016)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_ij <- inner_join(SIH_APAC_BPAI_GAL_hepc_un, SINAN, by="ID_PACIENTE")
 
-df.APAC_procedimento_2017 <- filter(df.APAC_procedimento, df.APAC_procedimento$ano_inicio == 2017)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_ij, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_ij.csv")
 
-df.APAC_procedimento_2018 <- filter(df.APAC_procedimento, df.APAC_procedimento$ano_inicio == 2018)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj <- anti_join(SIH_APAC_BPAI_GAL_hepc_un, SINAN, by="ID_PACIENTE")
 
-# Procedimento 0604640030
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj.csv")
 
-df.APAC_procedimento_60464003 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_PRINCIPAL == 60464003)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj2 <- anti_join(SINAN, SIH_APAC_BPAI_GAL_hepc_un, by="ID_PACIENTE")
 
-df.APAC_procedimento_sec_604640030 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_SECUNDARIO == 604640030)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj2, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj2.csv")
 
-# Procedimento 0604760019
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj <- do.call("rbind", list( SIH_APAC_BPAI_GAL_hepc_un, SINAN))
 
-df.APAC_procedimento_60476001 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_PRINCIPAL == 60476001)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj, ID_PACIENTE , .keep_all = TRUE)
 
-df.APAC_procedimento_sec_604760019 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_SECUNDARIO == 604760019)
+#####
+##  Tratamentos - Tratados ou não - Todos tratamentos
+#####
 
-# Procedimento 0604760027
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij <- inner_join(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep, APAC_SIA_trat_hepc, by="ID_PACIENTE")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij, ID_PACIENTE , .keep_all = TRUE)
 
-df.APAC_procedimento_60476002 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_PRINCIPAL == 60476002)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un.csv")
 
-df.APAC_procedimento_sec_604760027 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_SECUNDARIO == 604760027)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj <- anti_join(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep, APAC_SIA_trat_hepc, by="ID_PACIENTE")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj, ID_PACIENTE , .keep_all = TRUE)
 
-# Procedimento 0604760035
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj_un.csv")
 
-df.APAC_procedimento_60476003 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_PRINCIPAL == 60476003)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2 <- anti_join(APAC_SIA_trat_hepc, SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep, by="ID_PACIENTE")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un  <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2, ID_PACIENTE , .keep_all = TRUE)
 
-df.APAC_procedimento_sec_604760035 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_SECUNDARIO == 604760035)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un.csv")
 
-# Procedimento 0604760043
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj <- full_join(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep, APAC_SIA_trat_hepc)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj, ID_PACIENTE , .keep_all = TRUE)
 
-df.APAC_procedimento_60476004 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_PRINCIPAL == 60476004)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un.csv")
 
-df.APAC_procedimento_sec_604760043 <- filter(df.APAC_procedimento, df.APAC_procedimento$CO_PROCEDIMENTO_SECUNDARIO == 604760043)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60445001] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439001] <- "ALFAINTERFERONA 2B 3.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439002] <- "ALFAINTERFERONA 2B 5.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439004] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439005] <- "ALFAPEGINTERFERONA 2A 80MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439006] <- "ALFAPEGINTERFERONA 2A 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439007] <- "ALFAPEGINTERFERONA 2A 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60425001] <- "FILGRASTIM 300MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60447005] <- "ALFAEPOETINA 10.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60464001] <- "BOCEPREVIR 200 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60464002] <- "TELAPREVIR 375 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60464003] <- "SIMEPREVIR 150 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60476001] <- "SOFOSBUVIR 400 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60476002] <- "DACLATASVIR 60 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60476003] <- "DACLATASVIR 30 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60476004] <- "OMBITASVIR - 12,5MG/VERUPREVIR 75 MG/ RITONAVIR 50MG+DASABUVIR 250MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60439003] <- "ALFAINTERFERONA 2B 10.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60434007] <- "TACROLIMO 5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60446005] <- "TENOFOVIR 300MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60446004] <- "LAMIVUDINA 150MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60401002] <- "MESALAZINA 500MG "
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60404005] <- "ORMOTEROL 12MCG+BUDESONIDA 400 MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60428008] <- "BUDESONIDA 200MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60442001] <- "FLUDROCORTISONA 0.1MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60446002] <- "ENTECAVIR 0.5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60447004] <- "ALFAEPOETINA 4.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60432005] <- "MICOFENOLATO DE MOFETILA 500MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60446003] <- "LAMIVUDINA 10 MG/ML"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_PRINCIPAL == 60446006] <- "ENTECAVIR 1.0 MG"
 
-# isolando NAs e não NAs
 
-ano_gera <- as.data.frame(df.APAC_procedimento$ano_gera)
-setnames(ano_gera, "df.APAC_procedimento$ano_gera", "ano_geração")
-missmap(ano_gera, y.at = c(1) , y.labels = c(''), col = c('yellow' , 'black'), main = "Mapa de dados faltantes")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604450010] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 601120035] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390017] <- "ALFAINTERFERONA 2B 3.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390025] <- "ALFAINTERFERONA 2B 5.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390033] <- "ALFAINTERFERONA 2B 10.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 601190114] <- "ALFAINTERFERONA 2B 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 601190122] <- "ALFAINTERFERONA 2B 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 601190050] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390041] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390050] <- "ALFAPEGINTERFERONA 2A 80MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390068] <- "ALFAPEGINTERFERONA 2A 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604390076] <- "ALFAPEGINTERFERONA 2A 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604250010] <- "FILGRASTIM 300MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604470053] <- "ALFAEPOETINA 10.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604640013] <- "BOCEPREVIR 200 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604640021] <- "TELAPREVIR 375 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604640030] <- "SIMEPREVIR 150 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604760019] <- "SOFOSBUVIR 400 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604760027] <- "DACLATASVIR 60 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604760035] <- "DACLATASVIR 30 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604760043] <- "OMBITASVIR - 12,5MG/VERUPREVIR 75 MG/ RITONAVIR 50MG+DASABUVIR 250MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604460023] <- "ENTECAVIR 0.5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604460040] <- "TENOFOVIR 300MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un$CO_PROCEDIMENTO_SECUNDARIO == 604460058] <- "TENOFOVIR 300MG"
 
-ano_inicio <- as.data.frame(df.APAC_procedimento$ano_inicio)
-setnames(ano_inicio, "df.APAC_procedimento$ano_inicio", "ano_início")
-missmap(ano_inicio, y.at = c(1) , y.labels = c(''), col = c('yellow' , 'black'), main = "Mapa de dados faltantes")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60445001] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439001] <- "ALFAINTERFERONA 2B 3.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439002] <- "ALFAINTERFERONA 2B 5.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439004] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439005] <- "ALFAPEGINTERFERONA 2A 80MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439006] <- "ALFAPEGINTERFERONA 2A 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439007] <- "ALFAPEGINTERFERONA 2A 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60425001] <- "FILGRASTIM 300MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60447005] <- "ALFAEPOETINA 10.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60464001] <- "BOCEPREVIR 200 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60464002] <- "TELAPREVIR 375 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60464003] <- "SIMEPREVIR 150 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60476001] <- "SOFOSBUVIR 400 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60476002] <- "DACLATASVIR 60 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60476003] <- "DACLATASVIR 30 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60476004] <- "OMBITASVIR - 12,5MG/VERUPREVIR 75 MG/ RITONAVIR 50MG+DASABUVIR 250MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60439003] <- "ALFAINTERFERONA 2B 10.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60434007] <- "TACROLIMO 5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60446005] <- "TENOFOVIR 300MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60446004] <- "LAMIVUDINA 150MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60401002] <- "MESALAZINA 500MG "
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60404005] <- "ORMOTEROL 12MCG+BUDESONIDA 400 MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60428008] <- "BUDESONIDA 200MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60442001] <- "FLUDROCORTISONA 0.1MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60446002] <- "ENTECAVIR 0.5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60447004] <- "ALFAEPOETINA 4.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60432005] <- "MICOFENOLATO DE MOFETILA 500MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60446003] <- "LAMIVUDINA 10 MG/ML"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60446006] <- "ENTECAVIR 1.0 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_PRINCIPAL == 60401009] <- "SULFASSALAZINA 500MG"
 
-ano_solic <- as.data.frame(df.APAC_procedimento$ano_solic)
-setnames(ano_solic, "df.APAC_procedimento$ano_solic", "ano_solicitação")
-missmap(ano_solic, y.at = c(1) , y.labels = c(''),col = c('yellow' , 'black'), main = "Mapa de dados faltantes")
 
-ano_missmap <- as.data.frame(c(ano_inicio,ano_solic))
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604450010] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601120035] <- "RIBAVIRINA 250 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390017] <- "ALFAINTERFERONA 2B 3.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390025] <- "ALFAINTERFERONA 2B 5.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390033] <- "ALFAINTERFERONA 2B 10.000.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601190114] <- "ALFAINTERFERONA 2B 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601190122] <- "ALFAINTERFERONA 2B 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601190050] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390041] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390050] <- "ALFAPEGINTERFERONA 2A 80MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390068] <- "ALFAPEGINTERFERONA 2A 100MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604390076] <- "ALFAPEGINTERFERONA 2A 120MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604250010] <- "FILGRASTIM 300MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604470053] <- "ALFAEPOETINA 10.000 UI"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604640013] <- "BOCEPREVIR 200 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604640021] <- "TELAPREVIR 375 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604640030] <- "SIMEPREVIR 150 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604760019] <- "SOFOSBUVIR 400 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604760027] <- "DACLATASVIR 60 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604760035] <- "DACLATASVIR 30 MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604760043] <- "OMBITASVIR - 12,5MG/VERUPREVIR 75 MG/ RITONAVIR 50MG+DASABUVIR 250MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604460023] <- "ENTECAVIR 0.5MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604460040] <- "TENOFOVIR 300MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604460058] <- "TENOFOVIR 300MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601160010] <- "FILGRASTIM 300MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 601190041] <- "ALFAPEGINTERFERONA 2A 180MCG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604460015] <- "ADEFOVIR 10MG"
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO[SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un$CO_PROCEDIMENTO_SECUNDARIO == 604460031] <- "LAMIVUDINA 10MG/ML"
 
-colnames(ano_missmap)
 
-missmap(ano_missmap, y.at = c(1) , y.labels = c(''), col = c('yellow' , 'black'), main = "Mapa de dados faltantes")
+#SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_tratados <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un %>% filter(grepl('604450010|604390017|604390025|0604390041|604390050|604390068|604390076|604250010|604470053|604640013|604640021|604640030|604760019|604760027|604760035|604760043', PROCEDIMENTO))
 
-co_municipio_hospital_miss <- as.data.frame(df.APAC_procedimento$CO_MUNICIPIO_HOSPITAL)
-setnames(co_municipio_hospital_miss, "df.APAC_procedimento$CO_MUNICIPIO_HOSPITAL", "co_municipio_hospital")
-missmap(co_municipio_hospital_miss, y.at = c(1) , y.labels = c(''), col = c('yellow' , 'black'), main = "Mapa de dados faltantes")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un %>% separate(PROCEDIMENTO, c("PROCEDIMENTO1","PROCEDIMENTO2", "PROCEDIMENTO3"), "_", extra = "merge") 
 
-# ano de início - separação por ano para todos os tratamentos
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un_sep.csv")
 
-#2015
-df.APAC_procedimento_2015_mun_br <- select(df.APAC_procedimento_2015, CO_MUNICIPIO_HOSPITAL)
-df.APAC_procedimento_2015_mun <- table(df.APAC_procedimento_2015_mun_br)
-df.APAC_procedimento_2015_mun <- as.data.frame(df.APAC_procedimento_2015_mun)
-write.csv(df.APAC_procedimento_2015_mun_br, file = '/Users/mikaellemos/Produtos/produto1/df.APAC_procedimento_2015_mun.csv', row.names=FALSE)
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_fj_un.csv")
 
-#2016
-df.APAC_procedimento_2016_mun_br <- select(df.APAC_procedimento_2016, CO_MUNICIPIO_HOSPITAL)
-df.APAC_procedimento_2016_mun <- table(df.APAC_procedimento_2016_mun_br)
-df.APAC_procedimento_2016_mun <- as.data.frame(df.APAC_procedimento_2016_mun)
-write.csv(df.APAC_procedimento_2016_mun_br, file = '/Users/mikaellemos/Produtos/produto1/df.APAC_procedimento_2016_mun.csv', row.names=FALSE)
 
-#2017
-df.APAC_procedimento_2017_mun_br <- select(df.APAC_procedimento_2017, CO_MUNICIPIO_HOSPITAL)
-df.APAC_procedimento_2017_mun <- table(df.APAC_procedimento_2017_mun_br)
-df.APAC_procedimento_2017_mun <- as.data.frame(df.APAC_procedimento_2017_mun)
-write.csv(df.APAC_procedimento_2017_mun_br, file = '/Users/mikaellemos/Produtos/produto1/df.APAC_procedimento_2017_mun.csv', row.names=FALSE)
+##############
+##### Gráficos
+##############
 
-#2018
-df.APAC_procedimento_2018_mun_br <- select(df.APAC_procedimento_2018, CO_MUNICIPIO_HOSPITAL)
-df.APAC_procedimento_2018_mun <- table(df.APAC_procedimento_2018_mun_br)
-df.APAC_procedimento_2018_mun <- as.data.frame(df.APAC_procedimento_2018_mun)
-write.csv(df.APAC_procedimento_2018_mun_br, file = '/Users/mikaellemos/Produtos/produto1/df.APAC_procedimento_2018_mun.csv', row.names=FALSE)
+### tabela plot - frequência de pacientes com hep c/tratamentos e porcentagem pacientes hep c/tratamentos por ano
 
-# Extrair código IBGE completo
-cod_mun_IBGE <- df.APAC_CID <- readxl::read_xls("/Users/mikaellemos/Downloads/DTB_2018/RELATORIO_DTB_BRASIL_MUNICIPIO.xls")
+table(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano, exclude = NULL)
 
- ############# tabela completa ano 2015 - COD IBGE 7 digitos ################
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_OCORR <- as.Date(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_OCORR, format = "%d/%m/%Y")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_INICIO <- as.Date(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_INICIO, format = "%d/%m/%Y")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_SOLIC <- as.Date(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_SOLIC, format = "%d/%m/%Y")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_FIM <- as.Date(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_FIM, format = "%d/%m/%Y")
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_GERACAO <- as.Date(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_GERACAO, format = "%d/%m/%Y")
 
-# retirar úktimo digito do código completo 7 dígitos 
-cod_mun_completo <- substr(cod_mun_IBGE$`Código Município Completo`, 1, 6)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano2 <- ymd(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_OCORR)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano2 <- year(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano2)
 
-# transformar lista de cidades 2015 com 6 digitos em df
-cod_mun_completo <- as.data.frame(cod_mun_completo)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano3 <- ymd(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_INICIO)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano3 <- year(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano3)
 
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-cod_mun_IBGE_6d <- cbind(cod_mun_completo, cod_mun_IBGE)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano4 <- ymd(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_SOLIC)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano4 <- year(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano4)
 
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-df1 <- as.data.frame(cod_mun_IBGE_6d)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano5 <- ymd(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_FIM)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano5 <- year(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano5)
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano6 <- ymd(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$DATA_GERACAO)
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano6 <- year(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano6)
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un %>% mutate(ano7 = coalesce(ano3, ano6, ano5, ano4, ano2))
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un %>% mutate(ano8 = coalesce(ano, ano7))
+
+### Correção de datas
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un_datas <- filter(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un, ano8 == 1952 | ano8 == 1977 | ano8 == 1979 | ano8 == 1982 | ano8 == 1983 | ano8 == 1984 | ano8 == 1987 | ano8 == 1990 | ano8 == 1992 | ano8 == 1993 | ano8 == 1994 | ano8 == 1995 | ano8 == 1996 | ano8 == 1997 | ano8 == 1998 | ano8 == 1999 | ano8 == 2000 | ano8 == 2001 | ano8 == 2002 | ano8 == 2003 | ano8 == 2004 | ano8 == 2005 | ano8 == 2006)
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un_datas_un <- distinct(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un_datas, ID_PACIENTE , .keep_all = TRUE)
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un_datas_un <- select(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un_datas_un, "DT_OCOR", "ano", "ano8")
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano8[is.na(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un$ano8)] <- 2007
+
+plot_hep_tratamentos <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un %>% group_by(ID_PACIENTE, ano8 )
+plot_hep_tratamentos_n <- plot_hep_tratamentos %>% summarise(n = n())
+
+plot_hep_tratamentos_n$CO_PROCEDIMENTO_PRINCIPAL <- ""
+
+plot_hep_tratamentos_n <- select(plot_hep_tratamentos_n, "ID_PACIENTE", "ano" = "ano8", "CO_PROCEDIMENTO_PRINCIPAL", "n")
+
+#### tabela Plot tratamentos - todos os tratamentos
+
+plot_todos_tratamentos <- full_join(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_aj2_un, SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_ij_un)
+plot_todos_tratamentos_un <-  distinct(plot_todos_tratamentos, ID_PACIENTE , .keep_all = TRUE)
+
+plot_todos_tratamentos_un$COMPETENCIA <- ym(plot_todos_tratamentos_un$COMPETENCIA)
+plot_todos_tratamentos_un$ano <- year(plot_todos_tratamentos_un$COMPETENCIA)
+
+plot_todos_tratamentos_un <- plot_todos_tratamentos_un %>% group_by(ID_PACIENTE, ano, CO_PROCEDIMENTO_PRINCIPAL )
+plot_todos_tratamentos_un_n <- plot_todos_tratamentos_un %>% summarise(n = n())
+
+plot_todos_tratamentos__hepc_un_n <- do.call("rbind", list(plot_hep_tratamentos_n, plot_todos_tratamentos_un_n))
+
+plot_todos_tratamentos__hepc_un_n <- full_join(plot_todos_tratamentos_un_n, plot_hep_tratamentos_n )
+
+plot_todos_tratamentos__hepc_un_n_ij <- inner_join(plot_todos_tratamentos_un_n, plot_hep_tratamentos_n, by = "ID_PACIENTE")
+
+plot_todos_tratamentos__hepc_un_n_aj2 <- anti_join(plot_hep_tratamentos_n, plot_todos_tratamentos_un_n , by = "ID_PACIENTE")
+
+plot_todos_tratamentos__hepc_un_n_aj2$tratamento <- "Diagnosticados"
+plot_todos_tratamentos__hepc_un_n_ij$tratamento <- "Tratados"
+
+plot_todos_tratamentos__hepc_un_n_ij <- select(plot_todos_tratamentos__hepc_un_n_ij, "ID_PACIENTE", "ano" = "ano.x",  "CO_PROCEDIMENTO_PRINCIPAL" = "CO_PROCEDIMENTO_PRINCIPAL.x" , "n" = "n.x" )
+
+plot_todos_tratamentos__hepc_un_n <- do.call("rbind", list(plot_todos_tratamentos__hepc_un_n_ij, plot_todos_tratamentos__hepc_un_n_aj2))
+
+is.na(plot_todos_tratamentos__hepc_un_n) <- plot_todos_tratamentos__hepc_un_n==''  
+
+plot_todos_tratamentos__hepc_un_n <- plot_todos_tratamentos__hepc_un_n %>% group_by(CO_PROCEDIMENTO_PRINCIPAL, tratamento, ano )
+plot_todos_tratamentos__hepc_un_n <- plot_todos_tratamentos__hepc_un_n %>% summarise(n = n())
+
+plot_todos_tratamentos__hepc_un_n_ano <- aggregate(plot_todos_tratamentos__hepc_un_n['n'], by=c(plot_todos_tratamentos__hepc_un_n['ano'],plot_todos_tratamentos__hepc_un_n['tratamento']), sum)
+
+
+plot_todos_tratamentos__hepc_un_n_ano_2007_2018 <- filter(plot_todos_tratamentos__hepc_un_n_ano, ano == 2007 | ano == 2008 |  ano == 2009|  ano == 2010 |  ano == 2011 |  ano == 2012 |  ano == 2013 |  ano == 2014 |  ano == 2015 |  ano == 2016|  ano == 2017 |  ano == 2018 )
+
+#plot_todos_tratamentos__hepc_un_n_ano_2007_2018 = mutate(plot_todos_tratamentos__hepc_un_n_ano_2007_2018, 
+ #               n_pct = n / sum(n))
+    
+
+#plot_todos_tratamentos__hepc_un_n_ano_2007_2018 = mutate(plot_todos_tratamentos__hepc_un_n_ano_2007_2018, pct=paste(round(n_pct*100,1)))
+
+
+# total de Tratamentos/pacientes com diagnóstico de hepatite C por ano
+
+### Frequência
+
+ggplot(data=plot_todos_tratamentos__hepc_un_n_ano_2007_2018, aes(x=ano, y=n, fill=tratamento)) +
+  geom_bar(stat="identity", position=position_dodge())+ 
+  geom_text(aes(label=n), vjust=-0.3, position = position_dodge(0.9), size=5)+
+  scale_fill_brewer(palette="Paired")+
+  theme_minimal() +  scale_x_continuous(name ="",breaks= plot_todos_tratamentos__hepc_un_n_ano_2007_2018$ano)+
+  scale_y_continuous(name="Frequência") + theme(legend.text = element_text(colour="black", size=12, face="bold") , legend.title = element_blank(),axis.text.y =element_text(hjust=7,size=14, face = "bold" ), axis.text.x=element_text(vjust=7,size=14, face = "bold" ) ,axis.title.x = element_blank(),
+axis.title.y = element_text(size = 14, face = "bold")
+  )
+
+
+### Porcentagem
+
+ggplot(plot_todos_tratamentos__hepc_un_n_2007_2018, aes(x=as.factor(ano), fill=as.factor(tratamento)))+
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" , size=5) + scale_fill_brewer(palette="Paired") + theme_minimal()+
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('% de pessoas diagnosticadas/tratadas') + scale_y_continuous(labels = scales::percent) + theme(legend.text = element_text(colour="black", size=12, face="bold") , legend.title = element_blank(),axis.text.y =element_text(size=14, face = "bold" ), axis.text.x=element_text(vjust=7,size=14, face = "bold" ) ,axis.title.x = element_blank(),
+                                                                                                         axis.title.y = element_text(size = 14, face = "bold")) 
+
+plot_todos_tratamentos__hepc_un_n_2007_2018 <- filter(plot_todos_tratamentos__hepc_un_n, ano == 2007 | ano == 2008 |  ano == 2009|  ano == 2010 |  ano == 2011 |  ano == 2012 |  ano == 2013 |  ano == 2014 |  ano == 2015 |  ano == 2016|  ano == 2017 |  ano == 2018 )
+
+### Venn diagram - pacientes com diagnóstico de hep c x SINAN - subnotificação/porcentagem subnotificação por banco de dados
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj %>% group_by(ID_PACIENTE,DB_ORIGEM, ano )
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb_n <- SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb %>% summarise(n = n())
+
+SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb_n_2007_2018 <- filter(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb_n, ano == 2007 | ano == 2008 |  ano == 2009|  ano == 2010 |  ano == 2011 |  ano == 2012 |  ano == 2013 |  ano == 2014 |  ano == 2015 |  ano == 2016|  ano == 2017 |  ano == 2018 )
+
+ggplot(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_aj_tb_n, aes(x=as.factor(ano), fill=as.factor(DB_ORIGEM)))+
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" , size=5)  + theme_minimal()+
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], angle=90,hjust=-0.1, label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('% dos bancos nos casos subnotificados') + scale_y_continuous(labels = scales::percent) + theme(legend.text = element_text(colour="black", size=12, face="bold") , legend.title = element_blank(),axis.text.y =element_text(size=14, face = "bold" ), axis.text.x=element_text(vjust=7,size=14, face = "bold" ) ,axis.title.x = element_blank(),
+                                                                                                      axis.title.y = element_text(size = 14, face = "bold")) 
+
+# distribuição de tratamentos por ano 
+
+#plot_todos_tratamentos__hepc_un_n_tratamento <- aggregate(plot_todos_tratamentos__hepc_un_n['n'], by=c(plot_todos_tratamentos__hepc_un_n['ano'],plot_todos_tratamentos__hepc_un_n['CO_PROCEDIMENTO_PRINCIPAL']), sum)
+
+#plot_todos_tratamentos__hepc_un_n_tratamento_2007_2018 <- filter(plot_todos_tratamentos__hepc_un_n_tratamento, ano == 2007 | ano == 2008 |  ano == 2009|  ano == 2010 |  ano == 2011 |  ano == 2012 |  ano == 2013 |  ano == 2014 |  ano == 2015 |  ano == 2016|  ano == 2017 |  ano == 2018 )
+
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "RIBAVIRINA 250 MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAINTERFERONA 2B 3.000.000 UI"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL ==  "ALFAINTERFERONA 2B 5.000.000 UI"] <-"OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAPEGINTERFERONA 2A 180MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAPEGINTERFERONA 2A 80MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAPEGINTERFERONA 2A 100MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAPEGINTERFERONA 2A 120MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "FILGRASTIM 300MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAEPOETINA 10.000 UI"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "BOCEPREVIR 200 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "TELAPREVIR 375 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "SIMEPREVIR 150 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "SOFOSBUVIR 400 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL ==  "DACLATASVIR 60 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "DACLATASVIR 30 MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL ==  "OMBITASVIR - 12,5MG/VERUPREVIR 75 MG/ RITONAVIR 50MG+DASABUVIR 250MG"] <- "DAA"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAINTERFERONA 2B 10.000.000 UI"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL ==  "TACROLIMO 5MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "TENOFOVIR 300MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "LAMIVUDINA 150MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "MESALAZINA 500MG "] <-  "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ORMOTEROL 12MCG+BUDESONIDA 400 MCG"] <-  "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "BUDESONIDA 200MCG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "FLUDROCORTISONA 0.1MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ENTECAVIR 0.5MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ALFAEPOETINA 4.000 UI"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "MICOFENOLATO DE MOFETILA 500MG"] <-  "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "LAMIVUDINA 10 MG/ML"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "ENTECAVIR 1.0 MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat[plot_todos_tratamentos__hepc_un_n_2007_2018$CO_PROCEDIMENTO_PRINCIPAL == "SULFASSALAZINA 500MG"] <- "OUTROS TRATAMENTOS"
+plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat <- replace_na(plot_todos_tratamentos__hepc_un_n_2007_2018$ttrat, "NÃO TRATADO")
+
+
+plot_todos_tratamentos__hepc_un_n_2007_2018gb <- plot_todos_tratamentos__hepc_un_n_2007_2018 %>% group_by( ttrat, ano )
+plot_todos_tratamentos__hepc_un_n_2007_2018gbn <- plot_todos_tratamentos__hepc_un_n_2007_2018gb %>% summarise(n = n())
+
+plot_todos_tratamentos__hepc_un_n_2007_2018gbn <- aggregate(plot_todos_tratamentos__hepc_un_n_2007_2018gbn['n'], by=c(plot_todos_tratamentos__hepc_un_n_2007_2018gbn['ano'],plot_todos_tratamentos__hepc_un_n_2007_2018gbn['ttrat']), sum)
+
+
+
+## Freq
+
+ggplot(data=plot_todos_tratamentos__hepc_un_n_2007_2018gbn, aes(x=ano, y=n, fill=ttrat)) +
+  geom_bar(stat="identity", position=position_dodge())+ 
+  geom_text(aes(label=n), vjust=-0.3, position = position_dodge(0.9), size=5)+
+  theme_minimal() +  scale_x_continuous(name ="",breaks= plot_todos_tratamentos__hepc_un_n_2007_2018gbn$ano)+
+  scale_y_continuous(name="Frequência") + theme(legend.text = element_text(colour="black", size=12, face="bold") , legend.title = element_blank(),axis.text.y =element_text(hjust=7,size=14, face = "bold" ), axis.text.x=element_text(vjust=7,size=14, face = "bold" ) ,axis.title.x = element_blank(),
+                                                axis.title.y = element_text(size = 14, face = "bold")
+  )
+
+# porcentagem tratamentos x DAAs 
+
+ggplot(plot_todos_tratamentos__hepc_un_n_2007_2018gbn, aes(x=as.factor(ano), fill=as.factor(ttrat)))+
+  geom_bar(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..]), position="dodge" , size=5) + scale_fill_brewer(palette="Paired") + theme_minimal()+
+  geom_text(aes( y=..count../tapply(..count.., ..x.. ,sum)[..x..], label=scales::percent(..count../tapply(..count.., ..x.. ,sum)[..x..]) ),
+            stat="count", position=position_dodge(0.9), vjust=-0.5)+
+  ylab('% de pessoas diagnosticadas/tratadas') + scale_y_continuous(labels = scales::percent) + theme(legend.text = element_text(colour="black", size=12, face="bold") , legend.title = element_blank(),axis.text.y =element_text(size=14, face = "bold" ), axis.text.x=element_text(vjust=7,size=14, face = "bold" ) ,axis.title.x = element_blank(),
+                                                                                                      axis.title.y = element_text(size = 14, face = "bold")) 
+
+
+##############
  
-# tabela contendo todos os municipios (IBGE 6 digitos) que receberam trtatamento de Hep C em 2015
-df_15 <- df.APAC_procedimento_2015_mun_br 
 
-# tabela completa contendo todos os múnicipios que receberam tratamento de Hep C em 2015 com cod IBGE 6 e 7 dígitos
-df.hepC.2015.mun  <- merge(df1,df_15, by.x = "cod_mun_completo", by.y = "CO_MUNICIPIO_HOSPITAL" , all.y = TRUE)
 
-# Contagem de tratamentos por UF
+write.csv(SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/SIH_APAC_BPAI_GAL_hepc_un_notif_sinan_APAC_medicamentos_fj_un.csv")
+write.csv(plot_todos_tratamentos_un_n, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos_un_n.csv")
+write.csv(plot_hep_tratamentos_n, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_hep_tratamentos_n.csv")
+write.csv(plot_todos_tratamentos__hepc_un_n, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n.csv")
+write.csv(plot_todos_tratamentos__hepc_un_n_ano, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_ano.csv")
+write.csv(plot_todos_tratamentos__hepc_un_n_tratamento, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_tratamento.csv")
+write.csv(plot_todos_tratamentos__hepc_un_n_2007_2018, "C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_2007_2018.csv")
 
-cont_2015_hepC_UF <- table(df.hepC.2015.mun$UF)
-cont_2015_hepC_UF <- as.data.frame(cont_2015_hepC_UF)
 
-# merge contagem com a tabela UF 2015
-contagem_hepC_2015_UF  <- merge(df.hepC.2015.mun,cont_2015_hepC_UF, by.x = "UF", by.y = "Var1" , all.x  = TRUE)
+plot_todos_tratamentos__hepc_un_n <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n.csv")
+plot_todos_tratamentos__hepc_un_n_2007_2018 <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_2007_2018.csv")
+plot_todos_tratamentos__hepc_un_n_ano <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_ano.csv")
+plot_todos_tratamentos__hepc_un_n_tratamento <- read.csv("C:/Users/lemos/Downloads/HEPATITES/produtos_opas/contrato_2021/produto1/BANCOS/plot_todos_tratamentos__hepc_un_n_tratamento.csv")
 
-UF_hepC_2015 <- distinct(contagem_hepC_2015_UF, UF, .keep_all = TRUE)
 
-# salvar tabela de med para Hep C do ano de 2015
-write.csv(df.hepC.2015.mun, file = '/Users/mikaellemos/Produtos/produto1/df.hepC.2015.mun.csv', row.names=FALSE)
-
-# salvar tabela de med para Hep C por UF do ano de 2015
-write.csv(UF_hepC_2015, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2015.csv', row.names=FALSE)
-
-### Municipios 2015 ####
-
-# Contagem de tratamentos por MUN
-
-cont_2015_hepC_MUN <- table(df.hepC.2015.mun$`Código Município Completo`)
-cont_2015_hepC_MUN <- as.data.frame(cont_2015_hepC_MUN)
-
-# merge contagem com a tabela MUN 2015
-contagem_hepC_2015_MUN  <- merge(df.hepC.2015.mun,cont_2015_hepC_MUN, by.x = "Código Município Completo", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2015_MUN <- distinct(contagem_hepC_2015_MUN, Nome_Município, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C por MUN do ano de 2015
-write.csv(UF_hepC_2015_MUN, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2015_MUN.csv', row.names=FALSE)
-
-
-############ tabela completa ano 2016 - COD IBGE 7 digitos ################
-
-# retirar úktimo digito do código completo 7 dígitos 
-cod_mun_completo <- substr(cod_mun_IBGE$`Código Município Completo`, 1, 6)
-
-# transformar lista de cidades 2015 com 6 digitos em df
-cod_mun_completo <- as.data.frame(cod_mun_completo)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-cod_mun_IBGE_6d <- cbind(cod_mun_completo, cod_mun_IBGE)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-df1 <- as.data.frame(cod_mun_IBGE_6d)
-
-# tabela contendo todos os municipios (IBGE 6 digitos) que receberam trtatamento de Hep C em 2016
-df_16 <- df.APAC_procedimento_2016_mun_br 
-
-# tabela completa contendo todos os múnicipios que receberam tratamento de Hep C em 2016 com cod IBGE 6 e 7 dígitos
-df.hepC.2016.mun  <- merge(df1,df_16, by.x = "cod_mun_completo", by.y = "CO_MUNICIPIO_HOSPITAL" , all.y = TRUE)
-
-# Contagem de tratamentos por UF
-
-cont_2016_hepC_UF <- table(df.hepC.2016.mun$UF)
-cont_2016_hepC_UF <- as.data.frame(cont_2016_hepC_UF)
-
-# merge contagem com a tabela UF 2016
-contagem_hepC_2016_UF  <- merge(df.hepC.2016.mun,cont_2016_hepC_UF, by.x = "UF", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2016 <- distinct(contagem_hepC_2016_UF, UF, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C do ano de 2016
-write.csv(df.hepC.2016.mun, file = '/Users/mikaellemos/Produtos/produto1/df.hepC.2016.mun.csv', row.names=FALSE)
-
-# salvar tabela de med para Hep C por UF do ano de 2016
-write.csv(UF_hepC_2016, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2016.csv', row.names=FALSE)
-
-### Municipios 2016 ####
-
-# Contagem de tratamentos por MUN
-
-cont_2016_hepC_MUN <- table(df.hepC.2016.mun$`Código Município Completo`)
-cont_2016_hepC_MUN <- as.data.frame(cont_2016_hepC_MUN)
-
-# merge contagem com a tabela MUN 2016
-contagem_hepC_2016_MUN  <- merge(df.hepC.2016.mun,cont_2016_hepC_MUN, by.x = "Código Município Completo", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2016_MUN <- distinct(contagem_hepC_2016_MUN, Nome_Município, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C por MUN do ano de 2016
-write.csv(UF_hepC_2016_MUN, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2016_MUN.csv', row.names=FALSE)
-
-############ tabela completa ano 2017 - COD IBGE 7 digitos ################
-
-# retirar úktimo digito do código completo 7 dígitos 
-cod_mun_completo <- substr(cod_mun_IBGE$`Código Município Completo`, 1, 6)
-
-# transformar lista de cidades 2017 com 6 digitos em df
-cod_mun_completo <- as.data.frame(cod_mun_completo)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-cod_mun_IBGE_6d <- cbind(cod_mun_completo, cod_mun_IBGE)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-df1 <- as.data.frame(cod_mun_IBGE_6d)
-
-# tabela contendo todos os municipios (IBGE 6 digitos) que receberam trtatamento de Hep C em 2017
-df_17 <- df.APAC_procedimento_2017_mun_br 
-
-# tabela completa contendo todos os múnicipios que receberam tratamento de Hep C em 2017 com cod IBGE 6 e 7 dígitos
-df.hepC.2017.mun  <- merge(df1,df_17, by.x = "cod_mun_completo", by.y = "CO_MUNICIPIO_HOSPITAL" , all.y = TRUE)
-
-# Remover NAs
-df.hepC.2017.mun <- na.exclude(df.hepC.2017.mun)
-
-# Contagem de tratamentos por UF
-
-cont_2017_hepC_UF <- table(df.hepC.2017.mun$UF)
-cont_2017_hepC_UF <- as.data.frame(cont_2017_hepC_UF)
-
-# merge contagem com a tabela UF 2017
-contagem_hepC_2017_UF  <- merge(df.hepC.2017.mun,cont_2017_hepC_UF, by.x = "UF", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2017 <- distinct(contagem_hepC_2017_UF, UF, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C do ano de 2017
-write.csv(df.hepC.2017.mun, file = '/Users/mikaellemos/Produtos/produto1/df.hepC.2017.mun.csv', row.names=FALSE)
-
-# salvar tabela de med para Hep C por UF do ano de 2017
-write.csv(UF_hepC_2017, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2017.csv', row.names=FALSE)
-
-### Municipios 2017 ####
-
-# Contagem de tratamentos por MUN
-
-cont_2017_hepC_MUN <- table(df.hepC.2017.mun$`Código Município Completo`)
-cont_2017_hepC_MUN <- as.data.frame(cont_2017_hepC_MUN)
-
-# merge contagem com a tabela MUN 2017
-contagem_hepC_2017_MUN  <- merge(df.hepC.2017.mun,cont_2017_hepC_MUN, by.x = "Código Município Completo", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2017_MUN <- distinct(contagem_hepC_2017_MUN, Nome_Município, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C por MUN do ano de 2017
-write.csv(UF_hepC_2017_MUN, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2017_MUN.csv', row.names=FALSE)
-
-############ tabela completa ano 2018 - COD IBGE 7 digitos ################
-
-# retirar úktimo digito do código completo 7 dígitos 
-cod_mun_completo <- substr(cod_mun_IBGE$`Código Município Completo`, 1, 6)
-
-# transformar lista de cidades 2018 com 6 digitos em df
-cod_mun_completo <- as.data.frame(cod_mun_completo)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-cod_mun_IBGE_6d <- cbind(cod_mun_completo, cod_mun_IBGE)
-
-# tabela completa IBGE contendo todos os municipios em 2018 (5570)
-df1 <- as.data.frame(cod_mun_IBGE_6d)
-
-# tabela contendo todos os municipios (IBGE 6 digitos) que receberam trtatamento de Hep C em 2018
-df_18 <- df.APAC_procedimento_2018_mun_br 
-
-# tabela completa contendo todos os múnicipios que receberam tratamento de Hep C em 2017 com cod IBGE 6 e 7 dígitos
-df.hepC.2018.mun  <- merge(df1,df_18, by.x = "cod_mun_completo", by.y = "CO_MUNICIPIO_HOSPITAL" , all.y = TRUE)
-
-# Contagem de tratamentos por UF
-
-cont_2018_hepC_UF <- table(df.hepC.2018.mun$UF)
-cont_2018_hepC_UF <- as.data.frame(cont_2018_hepC_UF)
-
-# merge contagem com a tabela UF 2018
-contagem_hepC_2018_UF  <- merge(df.hepC.2018.mun,cont_2018_hepC_UF, by.x = "UF", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2018 <- distinct(contagem_hepC_2018_UF, UF, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C do ano de 2018
-write.csv(df.hepC.2018.mun, file = '/Users/mikaellemos/Produtos/produto1/df.hepC.2018.mun.csv', row.names=FALSE)
-
-# salvar tabela de med para Hep C por UF do ano de 2018
-write.csv(UF_hepC_2018, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2018.csv', row.names=FALSE)
-
-### Municipios 2018 ####
-
-# Contagem de tratamentos por MUN
-
-cont_2018_hepC_MUN <- table(df.hepC.2018.mun$`Código Município Completo`)
-cont_2018_hepC_MUN <- as.data.frame(cont_2018_hepC_MUN)
-
-# merge contagem com a tabela MUN 2018
-contagem_hepC_2018_MUN  <- merge(df.hepC.2018.mun,cont_2018_hepC_MUN, by.x = "Código Município Completo", by.y = "Var1" , all.x  = TRUE)
-
-UF_hepC_2018_MUN <- distinct(contagem_hepC_2018_MUN, Nome_Município, .keep_all = TRUE)
-
-# salvar tabela de med para Hep C por MUN do ano de 2018
-write.csv(UF_hepC_2018_MUN, file = '/Users/mikaellemos/Produtos/produto1/UF_hepC_2018_MUN.csv', row.names=FALSE)
-
-# 2015 por UF
-
-UF_2015 <- sort(table(df.hepC.2015.mun$Nome_UF, useNA = "always"), decreasing = TRUE)
-
-UF_2015 <- as.data.frame(UF_2015)
-
-UF_2015$Porcentagem <- UF_2015$Freq / sum(UF_2015$Freq) * 100
-
-sum(UF_2015$Freq)
-
-write.csv(UF_2015, file = '/Users/mikaellemos/Produtos/produto1/UF_2015.csv', row.names=FALSE)
-
-
-# 2016 por UF
-
-UF_2016<- sort(table(df.hepC.2016.mun$Nome_UF, useNA = "always"), decreasing = TRUE)
-
-UF_2016 <- as.data.frame(UF_2016)
-
-UF_2016$Porcentagem <- UF_2016$Freq / sum(UF_2016$Freq) * 100
-
-sum(UF_2016$Freq)
-
-write.csv(UF_2016, file = '/Users/mikaellemos/Produtos/produto1/UF_2016.csv', row.names=FALSE)
-
-# 2017 por UF
-
-UF_2017<- sort(table(df.hepC.2017.mun$Nome_UF, useNA = "always"),decreasing = TRUE)
-
-UF_2017 <- as.data.frame(UF_2017)
-
-UF_2017$Porcentagem <- UF_2017$Freq / sum(UF_2017$Freq) * 100
-
-sum(UF_2017$Freq)
-
-write.csv(UF_2017, file = '/Users/mikaellemos/Produtos/produto1/UF_2017.csv', row.names=FALSE)
-
-# 2018 por UF
-
-UF_2018<- sort(table(df.hepC.2018.mun$Nome_UF, useNA = "always"), decreasing = TRUE)
-
-UF_2018 <- as.data.frame(UF_2018)
-
-UF_2018$Porcentagem <- UF_2018$Freq / sum(UF_2018$Freq) * 100
-
-sum(UF_2018$Freq)
-
-write.csv(UF_2018, file = '/Users/mikaellemos/Produtos/produto1/UF_2018.csv', row.names=FALSE)
-
-
-
-# 2015 por MUN
-
-MUN_2015 <- sort(table(df.hepC.2015.mun$Nome_Município, useNA = "always"), decreasing = TRUE)
-
-MUN_2015 <- as.data.frame(MUN_2015)
-
-MUN_2015$Porcentagem <- MUN_2015$Freq / sum(MUN_2015$Freq) * 100
-
-sum(MUN_2015$Freq)
-
-write.csv(MUN_2015, file = '/Users/mikaellemos/Produtos/produto1/MUN_2015.csv', row.names=FALSE)
-
-# 2016 por MUN
-
-MUN_2016 <- sort(table(df.hepC.2016.mun$Nome_Município, useNA = "always"), decreasing = TRUE)
-
-MUN_2016 <- as.data.frame(MUN_2016)
-
-MUN_2016$Porcentagem <- MUN_2016$Freq / sum(MUN_2016$Freq) * 100
-
-sum(MUN_2016$Freq)
-
-write.csv(MUN_2016, file = '/Users/mikaellemos/Produtos/produto1/MUN_2016.csv', row.names=FALSE)
-
-# 2017 por MUN
-
-MUN_2017 <- sort(table(df.hepC.2017.mun$Nome_Município, useNA = "always"), decreasing = TRUE)
-
-MUN_2017 <- as.data.frame(MUN_2017)
-
-MUN_2017$Porcentagem <- MUN_2017$Freq / sum(MUN_2017$Freq) * 100
-
-sum(MUN_2015$Freq)
-
-write.csv(MUN_2017, file = '/Users/mikaellemos/Produtos/produto1/MUN_2017.csv', row.names=FALSE)
-
-# 2018 por MUN
-
-MUN_2018 <- sort(table(df.hepC.2018.mun$Nome_Município, useNA = "always"), decreasing = TRUE)
-
-MUN_2018 <- as.data.frame(MUN_2018)
-
-MUN_2018$Porcentagem <- MUN_2018$Freq / sum(MUN_2018$Freq) * 100
-
-sum(MUN_2018$Freq)
-
-write.csv(MUN_2018, file = '/Users/mikaellemos/Produtos/produto1/MUN_2018.csv', row.names=FALSE)
-
-# Pie chart % distrtibuição por UF por ano
-UF_2015 <- na.exclude(UF_2015)
-UF_2015["regiao"] <- c("sudeste", "sudeste", "sul", "centro oeste", "norte", "nordeste", "nordeste")
-
-
-
-# Pie Chart with Percentages 2015
-slices <- c(10317, 2506, 2554, 2036, 2614) 
-lbls <- c("Sudeste", "Sul", "Centro Oeste", "Norte", "Nordeste")
-pct <- round(slices/sum(slices)*100)
-lbls <- paste(lbls, pct) # add percents to labels 
-lbls <- paste(lbls,"%",sep="") # ad % to labels 
-pie(slices,labels = lbls, col=rainbow(length(lbls)),
-    main="Porcentagem de dispensação por região")
-
-# Pie Chart with Percentages 2016
-slices <- c(134974, 20384, 10333, 11526, 12899) 
-lbls <- c("Sudeste", "Sul", "Centro Oeste", "Norte", "Nordeste")
-pct <- round(slices/sum(slices)*100)
-lbls <- paste(lbls, pct) # add percents to labels 
-lbls <- paste(lbls,"%",sep="") # ad % to labels 
-pie(slices,labels = lbls, col=rainbow(length(lbls)),
-    main="Porcentagem de dispensação por região")
-
-# Pie Chart with Percentages 2017
-slices <- c(94831, 36539, 3377, 5925, 8973) 
-lbls <- c("Sudeste", "Sul", "Centro Oeste", "Norte", "Nordeste")
-pct <- round(slices/sum(slices)*100)
-lbls <- paste(lbls, pct) # add percents to labels 
-lbls <- paste(lbls,"%",sep="") # ad % to labels 
-pie(slices,labels = lbls, col=rainbow(length(lbls)),
-    main="Porcentagem de dispensação por região")
-
-
-# Pie Chart with Percentages 2018
-slices <- c(48644, 26862, 3677, 3559, 5700) 
-lbls <- c("Sudeste", "Sul", "Centro Oeste", "Norte", "Nordeste")
-pct <- round(slices/sum(slices)*100)
-lbls <- paste(lbls, pct) # add percents to labels 
-lbls <- paste(lbls,"%",sep="") # ad % to labels 
-pie(slices,labels = lbls, col=rainbow(length(lbls)),
-    main="Porcentagem de dispensação por região")
